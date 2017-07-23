@@ -6,7 +6,8 @@
     },
     "FlexFS (net4.0)": {
       "commandName": "Executable",
-      "executablePath": "$(ProjectDir)\\bin\\$(Configuration)\\net4.0\\win\\FlexFS.exe"
+      "executablePath": "$(ProjectDir)\\bin\\$(Configuration)\\net4.0\\win\\FlexFS.exe",
+      "commandLineArgs": "o"
     }
   }
 }

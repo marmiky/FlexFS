@@ -16,7 +16,7 @@ namespace FlexFs
     internal class FlexFileSystem : IDokanOperations
     {
         // Dictionary containing logical paths associations
-        private readonly Dictionary<string, string> dirConf;
+        private readonly Dictionary<string, string[]> dirConf;
 
         private const FileAccess DataAccess = FileAccess.ReadData | FileAccess.WriteData | FileAccess.AppendData |
                                       FileAccess.Execute |
@@ -63,30 +63,37 @@ namespace FlexFs
         }
 
         // Load configuration and adapt data
-        private Dictionary<string, string> LoadConf(string confFileName)
+        private Dictionary<string, string[]> LoadConf(string confFileName)
         {
             string[] confData = File.ReadAllLines(confFileName);
-            Dictionary<string, string> retValue = new Dictionary<string, string>();
+            Dictionary<string, string[]> retValue = new Dictionary<string, string[]>();
             // Scan file lines
             foreach (string confLine in confData)
             {
                 // Get data
                 string[] cData = confLine.Split('>');
                 string key = cData[0].Trim();
-                string val = cData[1].Trim();
-                // Correct wrong values
+                string[] vals = cData[1].Split('|');
+                // Correct wrong keys
                 if (key != @"\")
                 {
+                    // If key dont end with slash add it
                     if (key.EndsWith(@"\"))
                         key = key.Substring(0, key.Length - 1);
+                    // If key dont start with slash add it
                     if (!key.StartsWith(@"\"))
                         key = @"\" + key;
                 }
-
-                if (!val.EndsWith(@"\"))
-                    val += @"\";
+                // Correct wrong values
+                for (int i = 0; i < vals.Length; i++)
+                {
+                    vals[i] = vals[i].Trim();
+                    // If value dont end with slash add it
+                    if (!vals[i].EndsWith(@"\"))
+                        vals[i] += @"\";
+                }
                 // Add the values to final dictionary
-                retValue.Add(key, val);
+                retValue.Add(key, vals);
             }
 
             return retValue;
@@ -97,32 +104,29 @@ namespace FlexFs
         {
             string retPath = path;
             // Scan logical paths
-            foreach (KeyValuePair<string, string> topDir in dirConf)
+            foreach (KeyValuePair<string, string[]> lDir in dirConf)
             {
                 // Add a slash to directory for check sub dirs
-                string slashedDir = topDir.Key;
+                string slashedDir = lDir.Key;
                 if (!slashedDir.EndsWith(@"\"))
                     slashedDir += @"\";
 
                 // Check dir and subdirs
-                if ((retPath == topDir.Key) || retPath.StartsWith(slashedDir))
+                if ((retPath == lDir.Key) || retPath.StartsWith(slashedDir))
                 {
                     string relPath = (retPath.Length > slashedDir.Length ? retPath.Substring(slashedDir.Length) : "");
                     // Scan all directories
-                    string[] dirs = topDir.Value.Split('|');
                     if (relPath != "")
-                        for (int i = 0; i < dirs.Length; i++)
+                        for (int i = 0; i < lDir.Value.Length; i++)
                         {
-                            // Correct real paths
-                            dirs[i] = dirs[i].Trim();
-                            if (!dirs[i].EndsWith(@"\"))
-                                dirs[i] += @"\";
-                            retPath = dirs[i] + relPath;
+                            // Generate the real path
+                            retPath = lDir.Value[i] + relPath;
+                            // If exist return it
                             if (File.Exists(retPath) || Directory.Exists(retPath))
                                 return retPath;
                         }
                     // Else return the first path
-                    return dirs[0] + relPath;
+                    return lDir.Value[0] + relPath;
                 }
             }
             // If this occours something is wrong in your configuration
@@ -133,28 +137,28 @@ namespace FlexFs
         private string[] GetPaths(string path)
         {
             // Scan logical paths
-            foreach (KeyValuePair<string, string> topDir in dirConf)
+            foreach (KeyValuePair<string, string[]> lDir in dirConf)
             {
                 // Add a slash to directory for check sub dirs
-                string slashedDir = topDir.Key;
+                string slashedDir = lDir.Key;
                 if (!slashedDir.EndsWith(@"\"))
                     slashedDir += @"\";
 
                 // Check dir and subdirs
-                if ((path == topDir.Key) || path.StartsWith(slashedDir))
+                if ((path == lDir.Key) || path.StartsWith(slashedDir))
                 {
+                    // Get the relative path
                     string relPath = (path.Length > slashedDir.Length ? path.Substring(slashedDir.Length) : "");
-                    // Scan all directories
-                    string[] dirs = topDir.Value.Split('|');
+                    // Get all logical dirs (copy to a new array)
+                    string[] dirs = new string[lDir.Value.Length];
+                    lDir.Value.CopyTo(dirs, 0);
+                    // If the relative path is not empty 
                     if (relPath != "")
+                        // Scan all directories
                         for (int i = 0; i < dirs.Length; i++)
-                        {
-                            // Correct the paths
-                            dirs[i] = dirs[i].Trim();
-                            if (!dirs[i].EndsWith(@"\"))
-                                dirs[i] += @"\";
+                            // Gen real paths
                             dirs[i] = dirs[i] + relPath;
-                        }
+                    // Return the directories
                     return dirs;
                 }
             }
@@ -170,18 +174,18 @@ namespace FlexFs
             if (path == @"\")
                 return "root";
             // Scan logical paths
-            foreach (KeyValuePair<string, string> topDir in dirConf)
+            foreach (KeyValuePair<string, string[]> lDir in dirConf)
             {
                 // Add a slash to directory for check sub dirs
-                string slashedDir = topDir.Key;
+                string slashedDir = lDir.Key;
                 if (!slashedDir.EndsWith(@"\"))
                     slashedDir += @"\";
                 // Check dir and subdirs
-                if ((path == topDir.Key) || path.StartsWith(slashedDir))
+                if ((path == lDir.Key) || path.StartsWith(slashedDir))
                 {
                     // Get the name on right side
-                    int lastSlash = topDir.Key.LastIndexOf(@"\");
-                    retValue = topDir.Key.Substring(lastSlash + 1);
+                    int lastSlash = lDir.Key.LastIndexOf(@"\");
+                    retValue = lDir.Key.Substring(lastSlash + 1);
                     return retValue;
                 }
             }

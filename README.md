@@ -16,3 +16,16 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 # FlexFS
 Flexible Fylesystem: Compose a file system merging different folders / network shares
+
+## Requirements:
+- Dokan: https://dokan-dev.github.io/
+- .Net 4.0+
+- One of the following:
+Windows Server 2016
+Windows 10
+Windows Server 2012 R2
+Windows 8.1
+Windows Server 2012
+Windows 8
+Windows Server 2008 R2 SP1
+Windows 7 SP1
