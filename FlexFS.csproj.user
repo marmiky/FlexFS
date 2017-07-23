@@ -4,6 +4,6 @@
     <DebuggerFlavor>ProjectDebugger</DebuggerFlavor>
   </PropertyGroup>
   <PropertyGroup>
-    <ActiveDebugProfile>FlexFS (net4.0)</ActiveDebugProfile>
+    <ActiveDebugProfile>FlexFS (net4.6)</ActiveDebugProfile>
   </PropertyGroup>
 </Project>

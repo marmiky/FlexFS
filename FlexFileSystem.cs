@@ -57,9 +57,9 @@ namespace FlexFs
         }
 
         // Constructor
-        public FlexFileSystem()
+        public FlexFileSystem(string confFileName)
         {
-            dirConf = LoadConf("fs.conf");
+            dirConf = LoadConf(confFileName);
         }
 
         // Load configuration and adapt data
