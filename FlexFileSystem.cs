@@ -200,6 +200,81 @@ namespace FlexFs
             return stringToCheck.Split(charToCount).Length - 1;
         }
 
+        public IList<FileInformation> FindFilesHelper(string fileName, string searchPattern)
+        {
+            IList<FileInformation> files = new List<FileInformation>();
+            // Hashset to check if a file is just added
+            HashSet<string> filesAdded = new HashSet<string>();
+
+            // First add logical files
+            int fileSlashCount = 1;
+            if (fileName != @"\")
+                fileSlashCount = countCharInsideString(fileName, '\\') + 1;
+
+            // Scan Logical entries
+            foreach (string logicalPath in dirConf.Keys)
+            {
+                // Ignore root logical path
+                if (logicalPath == @"\")
+                    continue;
+
+                // Check backslash and root folder
+                int slashCount = countCharInsideString(logicalPath, '\\');
+                if (slashCount != fileSlashCount || !logicalPath.StartsWith(fileName))
+                    continue;
+
+                // Translate the path
+                string dirName = GetFolderName(logicalPath);
+
+                // If file just added before ignore and go on
+                if (filesAdded.Contains(dirName))
+                    continue;
+
+                // If not match the searchPattern  ignore and go on
+                if (!DokanHelper.DokanIsNameInExpression(searchPattern, dirName, true))
+                    continue;
+
+                // Add a directory
+                var finfo = new FileInformation
+                {
+                    FileName = dirName,
+                    Attributes = FileAttributes.Directory,
+                    LastAccessTime = DateTime.Now,
+                    LastWriteTime = null,
+                    CreationTime = null
+                };
+                files.Add(finfo);
+                filesAdded.Add(finfo.FileName);
+            }
+
+            // Get real dirs from logical paths
+            string[] realDirs = GetPaths(fileName);
+            // Scan real dirs
+            foreach (string realDir in realDirs)
+            {
+                // If the directory not exist skip it
+                if (!Directory.Exists(realDir))
+                    continue;
+                // Get file list from real dir
+                IEnumerable<FileInformation> fEnum = new DirectoryInfo(GetPath(fileName))
+                .EnumerateFileSystemInfos()
+                .Where(finfo => DokanHelper.DokanIsNameInExpression(searchPattern, finfo.Name, true))
+                .Select(finfo => new FileInformation
+                {
+                    Attributes = finfo.Attributes,
+                    CreationTime = finfo.CreationTime,
+                    LastAccessTime = finfo.LastAccessTime,
+                    LastWriteTime = finfo.LastWriteTime,
+                    Length = (finfo as FileInfo)?.Length ?? 0,
+                    FileName = finfo.Name
+                });
+                // Merge to existing list (discard doubles)
+                files = files.Union(fEnum).ToList();
+            }
+            // Return the complete file list
+            return files;
+        }
+
         #region DokanOperations member
 
         public NtStatus CreateFile(string fileName, FileAccess access, FileShare share, FileMode mode,
@@ -411,112 +486,21 @@ namespace FlexFs
             }
         }
 
-        public NtStatus FindFiles(
-            string fileName,
-            out IList<FileInformation> files,
+        public NtStatus FindFiles(string fileName, out IList<FileInformation> files, DokanFileInfo info)
+        {
+            // This function is not called because FindFilesWithPattern is implemented
+            // Return DokanResult.NotImplemented in FindFilesWithPattern to make FindFiles called
+            files = FindFilesHelper(fileName, "*");
+
+            return Trace(nameof(FindFiles), fileName, info, DokanResult.Success);
+        }
+
+        public NtStatus FindFilesWithPattern(string fileName, string searchPattern, out IList<FileInformation> files,
             DokanFileInfo info)
         {
-            FileInfo fInfo;
-            DirectoryInfo dInfo;
-            files = new List<FileInformation>();
-            // Hashset to check if a file is just added
-            HashSet<string> filesAdded = new HashSet<string>();
+            files = FindFilesHelper(fileName, searchPattern);
 
-            // First add logical files
-            int fileSlashCount = 1;
-            if (fileName != @"\")
-                fileSlashCount = countCharInsideString(fileName, '\\') + 1;
-            
-            // Scan Logical entries
-            foreach (string key in dirConf.Keys)
-            {
-                string logicalPath = key;
-                if (!logicalPath.StartsWith(@"\"))
-                    logicalPath = @"\" + logicalPath;
-
-                // Ignore root loggical path
-                if (logicalPath == @"\")
-                    continue;
-
-                // Check backslash and root folder
-                int slashCount = countCharInsideString(logicalPath, '\\');
-                if (slashCount != fileSlashCount || !logicalPath.StartsWith(fileName))
-                    continue;
-
-                // Translate the path
-                string dirName = GetFolderName(logicalPath);
-                // If file just added before ignore and go on
-                if (filesAdded.Contains(dirName))
-                    continue;
-                
-                // Add a directory
-                var finfo = new FileInformation
-                {
-                    FileName = dirName,
-                    Attributes = FileAttributes.Directory,
-                    LastAccessTime = DateTime.Now,
-                    LastWriteTime = null,
-                    CreationTime = null
-                };
-                files.Add(finfo);
-                filesAdded.Add(finfo.FileName);
-            }
-
-            // Get real dirs from logical paths
-            string[] realDirs = GetPaths(fileName);
-            // Scan real dirs
-            foreach (string realDir in realDirs)
-            {
-                // If the directory not exist skip it
-                if (!Directory.Exists(realDir))
-                    continue;
-                // Read files and dirs
-                string[] dirFiles = Directory.GetFiles(realDir);
-                string[] dirs = Directory.GetDirectories(realDir);
-                // Scan dirs
-                foreach (var dir in dirs)
-                {
-                    // Get directory infos
-                    dInfo = new DirectoryInfo(dir);
-                    // If file just added before ignore and go on
-                    if (filesAdded.Contains(dInfo.Name))
-                        continue;
-                    // Add a directory
-                    var finfo = new FileInformation
-                    {
-                        FileName = dInfo.Name,
-                        Attributes = FileAttributes.Directory,
-                        LastAccessTime = dInfo.LastAccessTime,
-                        LastWriteTime = dInfo.LastWriteTime,
-                        CreationTime = dInfo.CreationTime
-                    };
-                    files.Add(finfo);
-                    filesAdded.Add(finfo.FileName);
-                }
-                // Scan files
-                foreach (var file in dirFiles)
-                {
-                    // Get files infos
-                    fInfo = new FileInfo(file);
-                    // If file just added before ignore and go on
-                    if (filesAdded.Contains(fInfo.Name))
-                        continue;
-                    // Add a file
-                    var finfo = new FileInformation
-                    {
-                        FileName = fInfo.Name,
-                        Attributes = fInfo.Attributes,
-                        LastAccessTime = fInfo.LastAccessTime,
-                        LastWriteTime = fInfo.LastWriteTime,
-                        CreationTime = fInfo.CreationTime,
-                        Length = fInfo.Length
-                    };
-                    files.Add(finfo);
-                    filesAdded.Add(finfo.FileName);
-                }
-            }
-            //return DokanResult.Success;
-            return Trace(nameof(FindFiles), fileName, info, DokanResult.Success);
+            return Trace(nameof(FindFilesWithPattern), fileName, info, DokanResult.Success);
         }
 
         public NtStatus GetFileInformation(
@@ -897,13 +881,6 @@ namespace FlexFs
         {
             streams = new FileInformation[0];
             return Trace(nameof(FindStreams), fileName, info, DokanResult.NotImplemented);
-        }
-
-        public NtStatus FindFilesWithPattern(string fileName, string searchPattern, out IList<FileInformation> files,
-            DokanFileInfo info)
-        {
-            files = new FileInformation[0];
-            return DokanResult.NotImplemented;
         }
 
         #endregion DokanOperations member
