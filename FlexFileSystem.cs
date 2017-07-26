@@ -103,6 +103,7 @@ namespace FlexFs
         private string GetPath(string path)
         {
             string retPath = path;
+
             // Scan logical paths
             foreach (KeyValuePair<string, string[]> lDir in dirConf)
             {
@@ -121,12 +122,14 @@ namespace FlexFs
                         {
                             // Generate the real path
                             retPath = lDir.Value[i] + relPath;
+
                             // If exist return it
                             if (File.Exists(retPath) || Directory.Exists(retPath))
                                 return retPath;
                         }
                     // Else return the first path
-                    return lDir.Value[0] + relPath;
+                    retPath = lDir.Value[0] + relPath;
+                    return retPath;
                 }
             }
             // If this occours something is wrong in your configuration
@@ -256,7 +259,7 @@ namespace FlexFs
                 if (!Directory.Exists(realDir))
                     continue;
                 // Get file list from real dir
-                IEnumerable<FileInformation> fEnum = new DirectoryInfo(GetPath(fileName))
+                IEnumerable<FileInformation> fEnum = new DirectoryInfo(realDir)
                 .EnumerateFileSystemInfos()
                 .Where(finfo => DokanHelper.DokanIsNameInExpression(searchPattern, finfo.Name, true))
                 .Select(finfo => new FileInformation
@@ -268,8 +271,8 @@ namespace FlexFs
                     Length = (finfo as FileInfo)?.Length ?? 0,
                     FileName = finfo.Name
                 });
-                // Merge to existing list (discard doubles)
-                files = files.Union(fEnum).ToList();
+                // Merge to existing list and discard doubles
+                files = files.Union(fEnum).GroupBy(o => o.FileName).Select(g => g.First()).ToList();
             }
             // Return the complete file list
             return files;
@@ -407,7 +410,9 @@ namespace FlexFs
 
                     if (mode == FileMode.CreateNew || mode == FileMode.Create) //Files are always created as Archive
                         attributes |= FileAttributes.Archive;
-                    File.SetAttributes(filePath, attributes);
+
+                    if(mode != FileMode.Open) // Why set attributes on file open?
+                        File.SetAttributes(filePath, attributes);
                 }
                 catch (UnauthorizedAccessException) // don't have access rights
                 {
@@ -513,6 +518,7 @@ namespace FlexFs
 
             // Get the real path
             var filePath = GetPath(fileName);
+
             // Get file infos
             FileSystemInfo finfo = new FileInfo(filePath);
             if (!finfo.Exists) // Not a file? Try to get directory infos

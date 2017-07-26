@@ -1,3 +1,8 @@
+## 2017-07-26
+- Fixed bug on read only shares UnauthorizedAccessException trying to set file attributes and can't open a file
+- Fixed bug on listing files
+- Discarding doubles in real right way
+
 ## 2017-07-24
 - Using LINQ for merge files lists
 
