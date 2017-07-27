@@ -15,6 +15,7 @@ namespace FlexFs
 {
     internal class FlexFileSystem : IDokanOperations
     {
+        private string driveName = "FlexFS";
         // Dictionary containing logical paths associations
         private readonly Dictionary<string, string[]> dirConf;
 
@@ -67,9 +68,17 @@ namespace FlexFs
         {
             string[] confData = File.ReadAllLines(confFileName);
             Dictionary<string, string[]> retValue = new Dictionary<string, string[]>();
+            bool gotDriveName = false;
             // Scan file lines
             foreach (string confLine in confData)
             {
+                // First line is drive name
+                if (!gotDriveName)
+                {
+                    driveName = confLine.Trim();
+                    gotDriveName = true;
+                    continue;
+                }
                 // Get data
                 string[] cData = confLine.Split('>');
                 string key = cData[0].Trim();
@@ -845,7 +854,7 @@ namespace FlexFs
         public NtStatus GetVolumeInformation(out string volumeLabel, out FileSystemFeatures features,
             out string fileSystemName, DokanFileInfo info)
         {
-            volumeLabel = "FlexFS";
+            volumeLabel = driveName;
             fileSystemName = "NTFS";
 
             features = FileSystemFeatures.CasePreservedNames | FileSystemFeatures.CaseSensitiveSearch |
