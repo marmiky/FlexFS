@@ -1,3 +1,6 @@
+## 2017-07-27
+- Get drives space infos
+
 ## 2017-07-26
 - Fixed bug on read only shares UnauthorizedAccessException trying to set file attributes and can't open a file
 - Fixed bug on listing files

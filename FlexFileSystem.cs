@@ -755,15 +755,63 @@ namespace FlexFs
 #endif
         }
 
+
+        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        static extern bool GetDiskFreeSpaceEx(string lpDirectoryName, out ulong lpFreeBytesAvailable, out ulong lpTotalNumberOfBytes, out ulong lpTotalNumberOfFreeBytes);
+
         public NtStatus GetDiskFreeSpace(
             out long freeBytesAvailable,
             out long totalBytes,
             out long totalFreeBytes,
             DokanFileInfo info)
         {
-            freeBytesAvailable = 512 * 1024 * 1024;
-            totalBytes = 1024 * 1024 * 1024;
-            totalFreeBytes = 512 * 1024 * 1024;
+            ulong FreeBytesAvailable;
+            ulong TotalNumberOfBytes;
+            ulong TotalNumberOfFreeBytes;
+            string driveName;
+            HashSet<string> drives = new HashSet<string>();
+            // Init sizes
+            freeBytesAvailable = 0;
+            totalBytes = 0;
+            totalFreeBytes = 0;
+            // Scan all real paths
+            foreach (string[] paths in dirConf.Values)
+            {
+                foreach (string path in paths)
+                {
+                    // Get the slash position
+                    int slashPos = 0;
+                    // Is a network share?
+                    if (path.StartsWith(@"\\"))
+                    {
+                        // Skip the 2 initial slashes
+                        slashPos = path.IndexOf(@"\", 2);
+                        // Skip also the third and get the fourth
+                        slashPos = path.IndexOf(@"\", slashPos + 1);
+                    }
+                    else
+                        slashPos = path.IndexOf(@"\");
+                    // Get the drive name
+                    driveName = path.Substring(0, slashPos + 1);
+                    // Add the drive
+                    if (!drives.Contains(driveName))
+                        drives.Add(driveName);
+                }
+            }
+            // Scan drives
+            foreach (string drive in drives)
+            {
+                // Call the windows api
+                bool success = GetDiskFreeSpaceEx(drive, out FreeBytesAvailable, out TotalNumberOfBytes, out TotalNumberOfFreeBytes);
+                if (success)
+                {
+                    // Add sizes
+                    freeBytesAvailable += (long)FreeBytesAvailable;
+                    totalBytes += (long)TotalNumberOfBytes;
+                    totalFreeBytes += (long)TotalNumberOfFreeBytes;
+                }
+            }
             return DokanResult.Success;
         }
 
