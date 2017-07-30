@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "FlexFS": {
+      "commandName": "Project",
+      "commandLineArgs": "-d -c fs.conf o"
+    }
+  }
+}

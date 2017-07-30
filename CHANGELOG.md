@@ -1,3 +1,6 @@
+## 2017-07-30
+- Debug mode and Normal mode added for best performance
+
 ## 2017-07-27
 - Get drives space infos
 - Get drive name from first line of configuration file

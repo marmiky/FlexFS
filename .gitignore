@@ -1,5 +1,2 @@
 ﻿# .gitignore
-[Bb]in/
-[Oo]bj/
-.vs/
-TestResults/
+packages/

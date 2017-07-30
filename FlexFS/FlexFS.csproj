@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
+    <OutputType>exe</OutputType>
     <TargetFrameworks>net4.6;net4.0</TargetFrameworks>
     <RuntimeIdentifier>win</RuntimeIdentifier>
   </PropertyGroup>
@@ -10,10 +10,17 @@
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
     <!--Set to True to run Code Analysis-->
     <RunCodeAnalysis>false</RunCodeAnalysis>
+    <ApplicationIcon />
+    <OutputTypeEx>exe</OutputTypeEx>
+    <StartupObject />
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="DokanNet" Version="1.1.0.3" />
+    <PackageReference Include="NDesk.Options" Version="0.2.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FlexFsLib\FlexFsLib.csproj" />
   </ItemGroup>
 
   <ItemGroup>

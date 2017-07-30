@@ -11,9 +11,9 @@ using FileAccess = DokanNet.FileAccess;
 using static DokanNet.FormatProviders;
 using DokanNet.Logging;
 
-namespace FlexFs
+namespace FlexFsLib
 {
-    internal class FlexFileSystem : IDokanOperations
+    public class FlexFileSystem : IDokanOperations
     {
         private string driveName = "FlexFS";
         // Dictionary containing logical paths associations
